@@ -411,6 +411,48 @@ figcaption .zoom{color:var(--blue);font-weight:600;white-space:nowrap}
 .btn-o:active{transform:scale(.98)}
 
 /* ═ Company grid ═ */
+
+/* 보험사 고르기 */
+.costep{font-size:13px;color:var(--ink-3);margin:16px 0 9px;font-weight:500}
+.cogrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px}
+.cocard{display:flex;flex-direction:column;align-items:center;gap:7px;padding:15px 8px;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);cursor:pointer;
+  transition:border-color .15s,background .15s}
+.cocard:hover{border-color:var(--line-2);background:var(--surface-2)}
+.cocard.on{border-color:var(--navy);border-width:1.5px;padding:14.5px 7.5px}
+.cocard.on .coab{background:var(--navy);color:#fff}
+.coab{display:grid;place-items:center;width:38px;height:38px;border-radius:11px;
+  background:var(--surface-2);color:var(--ink-2);font-size:13px;font-weight:700;letter-spacing:-.3px;
+  transition:background .15s,color .15s}
+.conm{font-size:12.5px;font-weight:500;color:var(--ink);text-align:center;line-height:1.3;word-break:keep-all}
+html[data-theme="pastel"] .cocard.on{border-color:var(--accent)}
+html[data-theme="pastel"] .cocard.on .coab{background:var(--p-rose);color:var(--accent)}
+
+.colabs{display:grid;grid-template-columns:repeat(auto-fill,minmax(112px,1fr));gap:8px}
+.colab{display:flex;align-items:center;justify-content:center;min-height:46px;padding:10px 12px;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--surface);
+  color:var(--ink-2);font-size:13.5px;font-weight:500;cursor:pointer;
+  text-decoration:none;text-align:center;line-height:1.35;word-break:keep-all;
+  transition:border-color .15s,background .15s,color .15s}
+.colab:hover{border-color:var(--line-2);background:var(--surface-2);color:var(--ink)}
+.colab.on{border-color:var(--navy);border-width:1.5px;padding:9.5px 11.5px;color:var(--navy);font-weight:600;background:var(--blue-soft)}
+html[data-theme="pastel"] .colab.on{border-color:var(--accent);color:var(--accent);background:var(--surface)}
+.colab-m{gap:5px}
+.colab-i{font-size:14px}
+
+.cobody{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:17px 19px;margin-top:10px}
+.colab-h{font-size:12.5px;font-weight:600;color:var(--ink-3);margin:0 0 9px;letter-spacing:.2px}
+.cotext{font-size:14.5px;color:var(--ink);line-height:1.85;word-break:keep-all}
+.cotext b{font-weight:600}
+.cofoot{margin-top:15px;padding-top:14px;border-top:1px solid var(--line)}
+@media(max-width:560px){
+  .cogrid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:7px}
+  .cocard{padding:13px 6px}
+  .coab{width:34px;height:34px;font-size:12px}
+  .conm{font-size:11.5px}
+  .colabs{grid-template-columns:repeat(auto-fill,minmax(98px,1fr));gap:7px}
+  .colab{font-size:12.5px;min-height:42px;padding:9px 10px}
+}
 .subtabs{display:inline-flex;gap:2px;background:var(--surface);border:1px solid var(--line);
   border-radius:var(--r-sm);padding:3px;margin:0 0 14px}
 .subtab{border:0;background:transparent;color:var(--ink-2);font-size:14px;font-weight:500;
@@ -1725,7 +1767,7 @@ const ic=(n,s)=>'<svg class="ic" width="'+(s||17)+'" height="'+(s||17)+'" viewBo
 const CATIC={"전체":"grid","온보딩":"user","보험사":"bldg","계약·실무":"wallet","고객 응대":"chat","제도":"book","공지":"mega"};
 
 const app=document.getElementById('app');
-let state={q:"",cat:"전체",grp:"",sub:"손보",coq:"",co:null,sort:"recent",
+let state={q:"",cat:"전체",grp:"",sub:"손보",coq:"",co:null,coLab:null,sort:"recent",
            open:new Set(),cmpOn:false,cmp:null,limit:20};
 const PAGE=20;
 /* 소분류를 보여줄 순서. 여기 없는 이름은 뒤에 붙습니다 */
@@ -2686,6 +2728,11 @@ function cellText(f,lab){
 }
 function coSection(){
   const list=coRows(), q=state.coq.trim();
+  const picked = state.co ? list.find(f=>f.id===state.co) : null;
+  const labs = picked ? labelsOf(picked) : [];
+  const lab = picked ? (state.coLab && labs.includes(state.coLab) ? state.coLab : labs[0]) : null;
+  const manual = picked ? DATA.find(m=>m.category==='보험사'&&m.badge==='📋 상세 매뉴얼'&&m.sub===picked.question) : null;
+
   return '<section class="sec">'+
     '<div class="sec-hd"><h2>'+ic('bldg',18)+'보험사 안내<span class="cnt">'+list.length+'개사</span></h2>'+
       '<button class="sort" id="cmpGo">'+ic('table',15)+'항목별로 보기</button></div>'+
@@ -2695,31 +2742,29 @@ function coSection(){
     '<div class="cosearch"><span class="sicon">'+ic('search',17)+'</span>'+
       '<input id="coSearch" type="search" autocomplete="off" placeholder="보험사 검색 (예: 메리츠)" value="'+esc(state.coq)+'"></div>'+
     (list.length?
-      '<p class="cotip">'+ic('bulb',14)+'칸을 누르면 그 내용만 크게 보입니다. 회사 이름을 누르면 그 회사 전체가 열립니다.</p>'+
-      '<div class="cowrap"><div class="cotw"><table class="cot"><thead><tr>'+
-        '<th class="cot-c">보험사</th>'+
-        coCols().map(l=>'<th>'+esc(l)+'</th>').join('')+
-        '<th>그 밖</th>'+
-      '</tr></thead><tbody>'+
+      '<p class="costep">보험사를 고르세요</p>'+
+      '<div class="cogrid">'+
       list.map(f=>{
-        const rest=restLabels(f);
-        const manual=DATA.find(m=>m.category==='보험사'&&m.badge==='📋 상세 매뉴얼'&&m.sub===f.question);
-        return '<tr>'+
-        '<th class="cot-c"><a href="#/faq/'+f.id+'">'+esc(f.question)+'</a>'+
-        (manual?'<a href="#/faq/'+manual.id+'" class="cot-manual" title="상세 매뉴얼 보기">📋</a>':'')+
-        '</th>'+
-        coCols().map(l=>{
-          const t=cellText(f,l);
-          return t ? '<td><button class="cot-b" data-cell="'+f.id+'" data-lab="'+esc(l)+'">'+
-                       '<span class="cot-x">'+esc(t.slice(0,220))+'</span></button></td>'
-                   : '<td class="cot-n"><span aria-label="없음">·</span></td>';
-        }).join('')+
-        (rest.length
-          ? '<td><button class="cot-b" data-cell="'+f.id+'" data-lab="*">'+
-              '<span class="cot-x cot-r">'+rest.map(x=>'<span class="cot-t">'+esc(x)+'</span>').join('')+'</span></button></td>'
-          : '<td class="cot-n"><span aria-label="없음">·</span></td>')+
-      '</tr>';}).join('')+
-      '</tbody></table></div></div>'
+        const nm=f.question, ab=nm.replace(/(손보|화재|생명|해상|라이프|손해보험|생명보험)$/,'')||nm.slice(0,2);
+        const on = picked && picked.id===f.id;
+        return '<button class="cocard'+(on?' on':'')+'" data-copick="'+f.id+'" aria-pressed="'+(on?'true':'false')+'">'+
+          '<span class="coab">'+esc(ab.slice(0,4))+'</span>'+
+          '<span class="conm">'+esc(nm)+'</span>'+
+        '</button>';
+      }).join('')+
+      '</div>'+
+      (picked?
+        '<p class="costep">'+esc(picked.question)+' — 보고 싶은 항목</p>'+
+        '<div class="colabs" role="group" aria-label="항목">'+
+          labs.map(l=>'<button class="colab'+(l===lab?' on':'')+'" data-colab="'+esc(l)+'" aria-pressed="'+(l===lab)+'">'+esc(l)+'</button>').join('')+
+          (manual?'<a class="colab colab-m" href="#/faq/'+manual.id+'"><span class="colab-i">📋</span>상세 매뉴얼</a>':'')+
+        '</div>'+
+        '<div class="cobody">'+
+          '<p class="colab-h">'+esc(lab)+'</p>'+
+          '<div class="cotext">'+(cellText(picked,lab)||'').split('\n').map(x=>esc(x)).join('<br>')+'</div>'+
+          '<div class="cofoot"><a class="btn-o" href="#/faq/'+picked.id+'">'+esc(picked.question)+' 전체 보기</a></div>'+
+        '</div>'
+      :'')
      :'<div class="conone">'+ic('search',22)+
         '<p><b>'+esc(state.coq.trim())+'</b> 이라는 보험사를 못 찾았습니다.</p>'+
         '<p class="sub">회사 이름 일부만 넣어보세요. 예를 들어 <b>메리츠</b>, <b>KB</b>, <b>라이나</b>.</p>'+
@@ -2765,7 +2810,7 @@ function bindList(){
     renderHome(); renderSide();
     document.getElementById('faq').scrollIntoView({block:'start'});}));
   app.querySelectorAll('.subtab').forEach(b=>b.addEventListener('click',()=>{
-    state.sub=b.dataset.sub; state.co=null; updateList();}));
+    state.sub=b.dataset.sub; state.co=null; state.coLab=null; updateList();}));
   app.querySelectorAll('.sort').forEach(b=>b.addEventListener('click',()=>{
     state.sort=b.dataset.sort;state.limit=PAGE;updateList();}));
   app.querySelectorAll('[data-go]').forEach(b=>b.addEventListener('click',()=>{location.hash='#/faq/'+b.dataset.go;}));
@@ -2821,15 +2866,22 @@ function bindList(){
       if(n){ n.focus(); try{ n.setSelectionRange(p,p); }catch(e){} }
     }, ms); };
     cs.addEventListener('compositionstart',()=>{ comp2=true; });
-    cs.addEventListener('compositionend',e=>{ comp2=false; state.coq=e.target.value; state.co=null; go(120); });
+    cs.addEventListener('compositionend',e=>{ comp2=false; state.coq=e.target.value; state.co=null; state.coLab=null; go(120); });
     cs.addEventListener('input',e=>{
-      state.coq=e.target.value; state.co=null;
+      state.coq=e.target.value; state.co=null; state.coLab=null;
       if(comp2) return;            /* 조합 중에는 다시 그리지 않습니다 */
       go(220);
     });
   }
   app.querySelectorAll('.cot-b').forEach(b=>b.addEventListener('click',()=>
     openCell(+b.dataset.cell, b.dataset.lab)));
+  app.querySelectorAll('[data-copick]').forEach(b=>b.addEventListener('click',()=>{
+    const nid=+b.dataset.copick; state.co = (state.co===nid? null : nid); state.coLab=null; updateList();
+    const s=document.querySelector('.sec'); if(s&&s.scrollIntoView) s.scrollIntoView({block:'start'});}));
+  app.querySelectorAll('[data-colab]').forEach(b=>b.addEventListener('click',()=>{
+    state.coLab=b.dataset.colab; updateList();}));
+  const cbk=document.getElementById('coBack');
+  if(cbk) cbk.addEventListener('click',()=>{ state.co=null; state.coLab=null; updateList(); });
   const ctw=app.querySelector('.cotw');
   if(ctw){
     const upd=()=>ctw.parentElement.classList.toggle('end',
